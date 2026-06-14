@@ -3,6 +3,7 @@
   "version": "1.0.1",
   "description": "MCP server that reads images from OpenCode's SQLite database and analyzes them via vision AI providers",
   "type": "module",
+  "packageManager": "pnpm@8.11.0",
   "main": "src/index.js",
   "bin": {
     "opencode-image-vision": "./src/index.js"
