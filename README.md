@@ -1,5 +1,6 @@
 # opencode-image-vision
 
+[![npm version](https://img.shields.io/npm/v/@showlotus/opencode-image-vision.svg)](https://www.npmjs.com/package/@showlotus/opencode-image-vision)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Server-blue.svg)](https://modelcontextprotocol.io/)
 [![Node](https://img.shields.io/badge/Node.js-22%2B-green.svg)](https://nodejs.org/)
@@ -57,7 +58,7 @@ No clone or install needed. Just add to your `opencode.jsonc`:
   "mcp": {
     "image-vision": {
       "type": "local",
-      "command": ["npx", "-y", "opencode-image-vision"],
+      "command": ["npx", "-y", "@showlotus/opencode-image-vision"],
       "environment": {
         "model": "zhipuai-coding-plan/glm-4.6v",
       },
