@@ -11,6 +11,15 @@
     "src/",
     "config.example.json"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/showlotus/opencode-image-vision.git"
+  },
+  "homepage": "https://github.com/showlotus/opencode-image-vision",
+  "bugs": {
+    "url": "https://github.com/showlotus/opencode-image-vision/issues"
+  },
+  "author": "showlotus",
   "keywords": [
     "mcp",
     "opencode",
