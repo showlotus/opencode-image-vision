@@ -1,0 +1,31 @@
+{
+  "name": "opencode-image-vision",
+  "version": "1.0.0",
+  "description": "MCP server that reads images from OpenCode's SQLite database and analyzes them via vision AI providers",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "opencode-image-vision": "./src/index.js"
+  },
+  "files": [
+    "src/",
+    "config.example.json"
+  ],
+  "keywords": [
+    "mcp",
+    "opencode",
+    "vision",
+    "image-analysis",
+    "glm",
+    "zhipuai"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "better-sqlite3": "^11.0.0",
+    "zod": "^3.23.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
