@@ -212,12 +212,30 @@ The screenshot shows a terminal with the following error message...
 
 ### Supported providers
 
-| Provider ID           | Base URL                               | Models     |
-| --------------------- | -------------------------------------- | ---------- |
-| `zhipuai-coding-plan` | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
-| `zai-coding-plan`     | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
-| `z-ai`                | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
-| `zhipuai`             | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
+**OpenAI-compatible** (reuse `OpenAICompatibleProvider`):
+
+| Provider ID           | Base URL                                                 | Example Models                              |
+| --------------------- | -------------------------------------------------------- | ------------------------------------------- |
+| `zhipuai-coding-plan` | `https://open.bigmodel.cn/api/paas/v4`                   | `glm-4.6v`                                  |
+| `zai-coding-plan`     | `https://open.bigmodel.cn/api/paas/v4`                   | `glm-4.6v`                                  |
+| `z-ai`                | `https://open.bigmodel.cn/api/paas/v4`                   | `glm-4.6v`                                  |
+| `zhipuai`             | `https://open.bigmodel.cn/api/paas/v4`                   | `glm-4.6v`                                  |
+| `moonshot` / `kimi`   | `https://api.moonshot.cn/v1`                             | `moonshot-v1-32k-vision-preview`            |
+| `minimax` / `minimax-cn-coding-plan` | `https://api.minimaxi.chat/v1`             | `MiniMax-Text-01`                           |
+| `openai`              | `https://api.openai.com/v1`                              | `gpt-4o`, `gpt-4o-mini`                     |
+| `qwen` / `dashscope`  | `https://dashscope.aliyuncs.com/compatible-mode/v1`      | `qwen-vl-max`, `qwen-vl-plus`               |
+| `doubao` / `volcengine` | `https://ark.cn-beijing.volces.com/api/v3`             | `doubao-vision-pro-32k`                     |
+| `yi` / `lingyiwanwu`  | `https://api.lingyiwanwu.com/v1`                         | `yi-vision-v2`                              |
+| `gemini` / `google`   | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.0-flash`, `gemini-1.5-pro`      |
+| `stepfun`             | `https://api.stepfun.com/v1`                             | `step-1v-32k`                               |
+| `baichuan`            | `https://api.baichuan-ai.com/v1`                         | `Baichuan4-Vision`                          |
+| `hunyuan`             | `https://api.hunyuan.cloud.tencent.com/v1`               | `hunyuan-vision`                            |
+
+**Custom API format**:
+
+| Provider ID           | Base URL                           | Provider Class   | Example Models                           |
+| --------------------- | ---------------------------------- | ---------------- | ---------------------------------------- |
+| `anthropic` / `claude` | `https://api.anthropic.com/v1`    | `ClaudeProvider` | `claude-3-5-sonnet-20241022`             |
 
 ---
 
@@ -232,49 +250,56 @@ Model: [calls analyze_images with session_id]
         PostgreSQL isn't running on port 5432. Start it with: brew services start postgresql"
 ```
 
-The text-only model never sees pixels — it reads the description returned by GLM-4.6V and reasons over it.
+The text-only model never sees pixels — it reads the description returned by the vision model and reasons over it.
 
 ---
 
 ## Extending with new providers
 
-Adding a new vision provider takes 3 steps:
+Most vision model providers use the **OpenAI-compatible chat completions API** — you only need to add 2 registry entries (no code). Only providers with a **different API format** need a custom class.
 
-**1. Add base URL to the registry** (`src/opencode.js`):
+### Adding an OpenAI-compatible provider (e.g. OpenAI, Qwen, Doubao)
+
+**1. Add base URL** (`src/opencode.js` → `PROVIDER_REGISTRY`):
 
 ```javascript
-const PROVIDER_REGISTRY = {
-  'zhipuai-coding-plan': { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', format: 'openai' },
-  // Add new provider:
-  openai: { baseUrl: 'https://api.openai.com/v1', format: 'openai' },
-}
+'my-provider': { baseUrl: 'https://api.example.com/v1', format: 'openai' },
 ```
 
-**2. Create a provider class** (`src/providers/openai.js`) — only needed if the API format differs:
+**2. Add provider mapping** (`src/providers/index.js` → `OPENAI_COMPATIBLE`):
+
+```javascript
+'my-provider': OpenAICompatibleProvider,
+```
+
+Done. Set `"model": "my-provider/my-vision-model"` in config.
+
+### Adding a custom-format provider (e.g. Anthropic Claude)
+
+**1. Add base URL** (`src/opencode.js` → `PROVIDER_REGISTRY`):
+
+```javascript
+'my-provider': { baseUrl: 'https://api.example.com/v1', format: 'custom' },
+```
+
+**2. Create a provider class** (`src/providers/my-provider.js`):
 
 ```javascript
 import { VisionProvider } from './base.js'
 
-export class OpenAIProvider extends VisionProvider {
+export class MyProvider extends VisionProvider {
   async analyze(base64, mime, prompt) {
     // Implement provider-specific API call
   }
 }
 ```
 
-**3. Register the mapping** (`src/providers/index.js`):
+See `src/providers/claude.js` for a working example (Anthropic uses `x-api-key` auth and `/messages` endpoint).
+
+**3. Add provider mapping** (`src/providers/index.js` → `PROVIDER_MAP`):
 
 ```javascript
-const PROVIDER_MAP = {
-  'zhipuai-coding-plan': GLMProvider,
-  openai: OpenAIProvider,
-}
-```
-
-Then set the `model` environment variable:
-
-```jsonc
-"environment": { "model": "openai/gpt-4o" }
+'my-provider': MyProvider,
 ```
 
 ---

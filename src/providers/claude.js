@@ -1,6 +1,6 @@
 import { VisionProvider } from './base.js'
 
-export class GLMProvider extends VisionProvider {
+export class ClaudeProvider extends VisionProvider {
   constructor(config) {
     super(config)
     this.apiKey = config.apiKey
@@ -9,13 +9,13 @@ export class GLMProvider extends VisionProvider {
     this.timeout = config.timeout || 60_000
 
     if (!this.apiKey) {
-      throw new Error('GLM API key not configured.')
+      throw new Error('Anthropic API key not configured.')
     }
     if (!this.baseUrl) {
-      throw new Error('GLM base URL not configured.')
+      throw new Error('Anthropic base URL not configured.')
     }
     if (!this.model) {
-      throw new Error('GLM model not configured.')
+      throw new Error('Anthropic model not configured.')
     }
   }
 
@@ -24,35 +24,39 @@ export class GLMProvider extends VisionProvider {
     const timer = setTimeout(() => ctrl.abort(), this.timeout)
 
     try {
-      const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      const res = await fetch(`${this.baseUrl}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
           model: this.model,
+          max_tokens: 1024,
           messages: [
             {
               role: 'user',
               content: [
-                { type: 'image_url', image_url: { url: `data:${mime};base64,${base64}` } },
+                {
+                  type: 'image',
+                  source: { type: 'base64', media_type: mime, data: base64 },
+                },
                 { type: 'text', text: prompt },
               ],
             },
           ],
-          stream: false,
         }),
         signal: ctrl.signal,
       })
 
       if (!res.ok) {
         const t = await res.text().catch(() => '')
-        throw new Error(`GLM API ${res.status}: ${t.slice(0, 200)}`)
+        throw new Error(`Anthropic API ${res.status}: ${t.slice(0, 200)}`)
       }
 
       const json = await res.json()
-      return json.choices?.[0]?.message?.content?.trim() || '[No content returned]'
+      return json.content?.[0]?.text?.trim() || '[No content returned]'
     } finally {
       clearTimeout(timer)
     }
