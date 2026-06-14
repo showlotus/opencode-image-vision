@@ -5,6 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { getDatabase, getImages } from './db.js'
 import { createProvider } from './providers/index.js'
+import { mapWithConcurrency } from './concurrency.js'
 
 const DEFAULT_PROMPT =
   process.env.prompt ||
@@ -16,6 +17,9 @@ const DEFAULT_PROMPT =
 
 const DEFAULT_LIMIT = Number(process.env.limit) || 5
 const MAX_LIMIT = Number(process.env.max_limit) || 20
+
+// 并发分析图片的最大并发数，可通过环境变量 concurrency 覆盖
+const DEFAULT_CONCURRENCY = Number(process.env.concurrency) || 5
 
 let provider
 try {
@@ -60,16 +64,19 @@ server.tool(
         }
       }
 
-      const results = []
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i]
-        try {
-          const desc = await provider.analyze(img.base64, img.mime, analysisPrompt)
-          results.push(`### Image ${i + 1}: ${img.filename}\n\n${desc}`)
-        } catch (e) {
-          results.push(`### Image ${i + 1}: ${img.filename}\n\n[Analysis failed: ${e.message}]`)
-        }
-      }
+      // 并发分析图片，单张失败不影响其他图片，结果保持原顺序
+      const results = await mapWithConcurrency(
+        images,
+        DEFAULT_CONCURRENCY,
+        async (img, i) => {
+          try {
+            const desc = await provider.analyze(img.base64, img.mime, analysisPrompt)
+            return `### Image ${i + 1}: ${img.filename}\n\n${desc}`
+          } catch (e) {
+            return `### Image ${i + 1}: ${img.filename}\n\n[Analysis failed: ${e.message}]`
+          }
+        },
+      )
 
       return {
         content: [
