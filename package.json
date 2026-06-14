@@ -1,5 +1,5 @@
 {
-  "name": "opencode-image-vision",
+  "name": "@showlotus/opencode-image-vision",
   "version": "1.0.0",
   "description": "MCP server that reads images from OpenCode's SQLite database and analyzes them via vision AI providers",
   "type": "module",

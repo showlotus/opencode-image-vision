@@ -1,24 +1,27 @@
 import { VisionProvider } from './base.js'
 
-const DEFAULT_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4'
-const DEFAULT_MODEL = 'glm-4.6v'
-const REQUEST_TIMEOUT_MS = 60_000
-
 export class GLMProvider extends VisionProvider {
   constructor(config) {
     super(config)
-    this.apiKey = config.apiKey || process.env.GLM_API_KEY
-    this.baseUrl = config.baseUrl || process.env.GLM_BASE_URL || DEFAULT_BASE_URL
-    this.model = config.model || process.env.GLM_VISION_MODEL || DEFAULT_MODEL
+    this.apiKey = config.apiKey
+    this.baseUrl = config.baseUrl
+    this.model = config.model
+    this.timeout = config.timeout || 60_000
 
     if (!this.apiKey) {
-      throw new Error('GLM API key not configured. Set GLM_API_KEY env var or pass apiKey in config.')
+      throw new Error('GLM API key not configured.')
+    }
+    if (!this.baseUrl) {
+      throw new Error('GLM base URL not configured.')
+    }
+    if (!this.model) {
+      throw new Error('GLM model not configured.')
     }
   }
 
   async analyze(base64, mime, prompt) {
     const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
+    const timer = setTimeout(() => ctrl.abort(), this.timeout)
 
     try {
       const res = await fetch(`${this.baseUrl}/chat/completions`, {

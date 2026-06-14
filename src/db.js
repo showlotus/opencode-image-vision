@@ -1,12 +1,41 @@
-import { homedir } from 'node:os'
+import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import Database from 'better-sqlite3'
 
-const DEFAULT_DB_PATH = join(homedir(), '.local', 'share', 'opencode', 'opencode.db')
+function detectDbPath() {
+  const candidates = []
+
+  if (process.env.OPENCODE_DB_PATH) {
+    candidates.push(process.env.OPENCODE_DB_PATH)
+  }
+
+  const opencodeDir = 'opencode'
+  const dbFile = 'opencode.db'
+
+  if (process.env.XDG_DATA_HOME) {
+    candidates.push(join(process.env.XDG_DATA_HOME, opencodeDir, dbFile))
+  }
+
+  const home = homedir()
+  if (platform() === 'win32') {
+    const localAppData = process.env.LOCALAPPDATA || join(home, 'AppData', 'Local')
+    candidates.push(join(localAppData, opencodeDir, dbFile))
+  } else {
+    candidates.push(join(home, '.local', 'share', opencodeDir, dbFile))
+  }
+
+  for (const p of candidates) {
+    if (existsSync(p)) return p
+  }
+
+  throw new Error(
+    `OpenCode database not found. Searched:\n${candidates.map(p => `  - ${p}`).join('\n')}\nSet OPENCODE_DB_PATH to override.`,
+  )
+}
 
 export function getDatabase() {
-  const dbPath = process.env.OPENCODE_DB_PATH || DEFAULT_DB_PATH
-  return new Database(dbPath, { readonly: true, fileMustExist: true })
+  return new Database(detectDbPath(), { readonly: true, fileMustExist: true })
 }
 
 export function getImages(db, sessionId, limit) {

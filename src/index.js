@@ -6,19 +6,22 @@ import { z } from 'zod'
 import { getDatabase, getImages } from './db.js'
 import { createProvider } from './providers/index.js'
 
-const DEFAULT_PROMPT = [
-  'Describe this image in detail, including:',
-  'text content, UI layout structure, interface elements, color scheme.',
-  'If there are code or technical details, list them thoroughly.',
-].join(' ')
+const DEFAULT_PROMPT =
+  process.env.prompt ||
+  [
+    'Describe this image in detail, including:',
+    'text content, UI layout structure, interface elements, color scheme.',
+    'If there are code or technical details, list them thoroughly.',
+  ].join(' ')
 
-const PROVIDER_TYPE = process.env.VISION_PROVIDER || 'glm'
+const DEFAULT_LIMIT = Number(process.env.limit) || 5
+const MAX_LIMIT = Number(process.env.max_limit) || 20
 
 let provider
 try {
-  provider = createProvider(PROVIDER_TYPE, {})
+  provider = createProvider()
 } catch (e) {
-  console.error(`Failed to initialize provider "${PROVIDER_TYPE}": ${e.message}`)
+  console.error(`Failed to initialize provider: ${e.message}`)
   process.exit(1)
 }
 
@@ -33,10 +36,10 @@ server.tool(
   {
     session_id: z.string().describe('OpenCode session ID (e.g. ses_xxx)'),
     prompt: z.string().optional().describe('Custom analysis prompt. Defaults to a detailed description prompt.'),
-    limit: z.number().int().positive().max(20).optional().describe('Maximum number of images to analyze. Default: 5.'),
+    limit: z.number().int().positive().max(MAX_LIMIT).optional().describe(`Maximum number of images to analyze. Default: ${DEFAULT_LIMIT}.`),
   },
   async ({ session_id, prompt, limit: userLimit }) => {
-    const limit = userLimit || 5
+    const limit = userLimit || DEFAULT_LIMIT
     const analysisPrompt = prompt || DEFAULT_PROMPT
 
     let db

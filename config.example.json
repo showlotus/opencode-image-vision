@@ -1,8 +1,7 @@
 {
-  "provider": "glm",
-  "glm": {
-    "apiKey": "your-glm-api-key",
-    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
-    "model": "glm-4.6v"
-  }
+  "model": "zhipuai-coding-plan/glm-4.6v",
+  "prompt": "Describe this image in detail, including: text content, UI layout structure, interface elements, color scheme. If there are code or technical details, list them thoroughly.",
+  "timeout": 60000,
+  "limit": 5,
+  "max_limit": 20
 }

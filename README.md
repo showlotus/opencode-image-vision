@@ -1,6 +1,125 @@
 # opencode-image-vision
 
-> MCP server that reads images from OpenCode's SQLite database and analyzes them via vision AI providers (GLM-4.6V and more).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Server-blue.svg)](https://modelcontextprotocol.io/)
+[![Node](https://img.shields.io/badge/Node.js-22%2B-green.svg)](https://nodejs.org/)
+
+> MCP server that adds vision capabilities to text-only LLMs in OpenCode by reading pasted images from the session database and analyzing them via a vision model.
+
+---
+
+## The problem
+
+Text-only models like **GLM-5**, **DeepSeek V4**, and **MiniMax** are great for code, but they cannot process images. Every time you paste a screenshot, OpenCode throws:
+
+```
+ERROR: Cannot read "clipboard" (this model does not support image input)
+```
+
+## The fix
+
+This MCP server reads images directly from OpenCode's **session SQLite database** — where pasted images are stored before the model rejects them — sends each image to a **vision model** (e.g. GLM-4.6V), and returns a text description the text-only model can reason about.
+
+**Result: paste → ask → done.** No file saving, no manual paths.
+
+---
+
+## Features
+
+- 🔍 **Session-based image reading** — Reads pasted images directly from OpenCode's SQLite database, no clipboard access needed
+- 🖼️ **Multi-image support** — Analyze multiple images in a single tool call
+- 🔌 **Zero API key configuration** — Automatically reads API keys from OpenCode's `account.json`
+- 🧩 **Extensible provider architecture** — Currently supports GLM/ZhipuAI; easily extendable to OpenAI, Claude, Qwen, etc.
+- 🖥️ **Cross-platform** — Auto-detects OpenCode database path on macOS, Linux, and Windows
+- ⚡ **MCP standard** — Works with OpenCode and any MCP-capable client
+
+---
+
+## Requirements
+
+- **Node.js 18+** (ESM support required)
+- **pnpm** (`npm install -g pnpm`)
+- **OpenCode** with a configured text-only model (e.g. GLM-5, DeepSeek V4)
+- A **vision model provider** configured in OpenCode's account (e.g. GLM-4.6V)
+
+---
+
+## Quick start
+
+You can use this MCP server in two ways: **npx** (zero install) or **local clone**.
+
+### Option A: npx (recommended)
+
+No clone or install needed. Just add to your `opencode.jsonc`:
+
+```jsonc
+{
+  "mcp": {
+    "image-vision": {
+      "type": "local",
+      "command": ["npx", "-y", "opencode-image-vision"],
+      "environment": {
+        "model": "zhipuai-coding-plan/glm-4.6v",
+      },
+    },
+  },
+}
+```
+
+npx will automatically download and run the server on first use.
+
+### Option B: Local clone
+
+For development or custom configurations:
+
+```bash
+git clone https://github.com/showlotus/opencode-image-vision.git ~/.config/opencode/mcp-servers/opencode-image-vision
+cd ~/.config/opencode/mcp-servers/opencode-image-vision
+pnpm install
+```
+
+Then wire it with the absolute path:
+
+```jsonc
+{
+  "mcp": {
+    "image-vision": {
+      "type": "local",
+      "command": [
+        "node",
+        "/Users/YOU/.config/opencode/mcp-servers/opencode-image-vision/src/index.js",
+      ],
+      "environment": {
+        "model": "zhipuai-coding-plan/glm-4.6v",
+      },
+    },
+  },
+}
+```
+
+> The install location doesn't matter — you'll reference it by absolute path in the config.
+
+### Add AGENTS.md instructions
+
+Add this to your `~/.config/opencode/AGENTS.md` so the AI knows when to use the tool:
+
+```markdown
+# Image Recognition
+
+31. When the user pastes an image or needs image analysis, and the current model may not
+    support image input, call the image-vision MCP `analyze_images` tool. Pass the current
+    session ID (from error messages or context) and the tool will read images from the database
+    and return vision model descriptions. Supports analyzing multiple images at once.
+32. When encountering "does not support image input" errors, auto-invoke
+    `analyze_images` to obtain image descriptions; do not tell the user recognition
+    is unsupported.
+```
+
+### 4. Restart OpenCode
+
+That's it. Paste an image and ask about it — the AI will automatically call `analyze_images` to get a description.
+
+---
 
 ## How it works
 
@@ -14,118 +133,195 @@
                                        ▼
                               ┌───────────────────┐
                               │  Vision AI API    │
-                              │  (GLM / OpenAI /  │
-                              │   Claude / Qwen)  │
+                              │  (GLM-4.6V, etc)  │
                               └───────────────────┘
 ```
 
-1. OpenCode calls the `analyze_images` tool with a `session_id`
-2. The server queries OpenCode's SQLite database for images in that session
-3. Each image (base64) is sent to the configured vision AI provider
-4. Text descriptions are returned to OpenCode
+1. User pastes an image → OpenCode stores it in the session SQLite database
+2. Text-only model rejects the image (`unsupportedParts()`)
+3. Model calls the `analyze_images` tool with the current `session_id`
+4. Server queries the database for image parts in that session
+5. Each image (base64) is sent to the configured vision AI provider
+6. Text descriptions are returned to the model
 
-## Installation
+---
 
-```bash
-git clone https://github.com/YOUR_USER/opencode-image-vision.git
-cd opencode-image-vision
-npm install
+## Tool reference
+
+### `analyze_images`
+
+Reads images from an OpenCode session and analyzes them via a vision model.
+
+| Parameter    | Type   | Required | Default    | Description                          |
+| ------------ | ------ | -------- | ---------- | ------------------------------------ |
+| `session_id` | string | **Yes**  | —          | OpenCode session ID (e.g. `ses_xxx`) |
+| `prompt`     | string | No       | _built-in_ | Custom analysis prompt               |
+| `limit`      | number | No       | `5`        | Max number of images to analyze      |
+
+**Example output:**
+
 ```
+Analyzed 2 image(s):
+
+### Image 1: clipboard
+
+This is a GitHub issue page titled "Image Clipboard Paste Not Working in OpenCode"...
+
+---
+
+### Image 2: screenshot.png
+
+The screenshot shows a terminal with the following error message...
+```
+
+---
 
 ## Configuration
 
 ### Environment variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `GLM_API_KEY` | Yes (for GLM) | — | ZhipuAI / GLM API key |
-| `GLM_BASE_URL` | No | `https://open.bigmodel.cn/api/paas/v4` | GLM API base URL |
-| `GLM_VISION_MODEL` | No | `glm-4.6v` | GLM vision model name |
-| `VISION_PROVIDER` | No | `glm` | Provider type: `glm` (extensible) |
-| `OPENCODE_DB_PATH` | No | `~/.local/share/opencode/opencode.db` | Path to OpenCode SQLite DB |
+| Variable    | Required | Default                        | Description                                                                                  |
+| ----------- | -------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
+| `model`     | No       | `zhipuai-coding-plan/glm-4.6v` | Vision model in `provider/model` format. API key auto-resolved from OpenCode `account.json`. |
+| `prompt`    | No       | _built-in English prompt_      | Default analysis prompt sent to the vision model                                             |
+| `timeout`   | No       | `60000`                        | Request timeout in milliseconds                                                              |
+| `limit`     | No       | `5`                            | Default max images per analysis                                                              |
+| `max_limit` | No       | `20`                           | Hard cap on images per analysis                                                              |
 
-### config.json (optional)
+> **No API key needed.** The server reads the API key automatically from OpenCode's `account.json` based on the provider ID in the `model` variable. The database path is auto-detected per OS.
 
-Copy `config.example.json` to `config.json` and fill in your credentials:
-
-```json
-{
-  "provider": "glm",
-  "glm": {
-    "apiKey": "your-glm-api-key",
-    "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
-    "model": "glm-4.6v"
-  }
-}
-```
-
-## OpenCode config
-
-Add to your `opencode.jsonc`:
+### Advanced example
 
 ```jsonc
 {
   "mcp": {
     "image-vision": {
-      "command": "node",
-      "args": ["/path/to/opencode-image-vision/src/index.js"],
-      "env": {
-        "GLM_API_KEY": "${GLM_API_KEY}"
-      }
-    }
-  }
+      "type": "local",
+      "command": ["node", "/path/to/opencode-image-vision/src/index.js"],
+      "environment": {
+        "model": "zhipuai-coding-plan/glm-4.6v",
+        "limit": "10",
+        "timeout": "30000",
+        "prompt": "Extract all text from this image and describe the UI layout.",
+      },
+    },
+  },
 }
 ```
 
-## AGENTS.md instructions
+### Supported providers
 
-Add this to your project's `AGENTS.md` to guide the AI when to use the tool:
+| Provider ID           | Base URL                               | Models     |
+| --------------------- | -------------------------------------- | ---------- |
+| `zhipuai-coding-plan` | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
+| `zai-coding-plan`     | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
+| `z-ai`                | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
+| `zhipuai`             | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v` |
 
-```markdown
-# Image Recognition
-31. When the user pastes an image or needs image analysis, and the current model may not
-    support image input, call the image-vision MCP `analyze_images` tool. Pass the current
-    session ID (from error messages or context) and the tool will read images from the database
-    and return GLM-4.6V vision descriptions. Supports analyzing multiple images at once.
-32. When encountering "does not support image input" errors, auto-invoke
-    `analyze_images` to obtain image descriptions; do not tell the user recognition
-    is unsupported.
+---
+
+## Usage example
+
 ```
+You: [paste a screenshot of an error]
+     "What's wrong with this?"
+
+Model: [calls analyze_images with session_id]
+     → "The error in the screenshot says ECONNREFUSED 127.0.0.1:5432.
+        PostgreSQL isn't running on port 5432. Start it with: brew services start postgresql"
+```
+
+The text-only model never sees pixels — it reads the description returned by GLM-4.6V and reasons over it.
+
+---
 
 ## Extending with new providers
 
-1. Create a new file in `src/providers/`, e.g. `openai.js`:
+Adding a new vision provider takes 3 steps:
+
+**1. Add base URL to the registry** (`src/opencode.js`):
+
+```javascript
+const PROVIDER_REGISTRY = {
+  'zhipuai-coding-plan': { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', format: 'openai' },
+  // Add new provider:
+  openai: { baseUrl: 'https://api.openai.com/v1', format: 'openai' },
+}
+```
+
+**2. Create a provider class** (`src/providers/openai.js`) — only needed if the API format differs:
 
 ```javascript
 import { VisionProvider } from './base.js'
 
 export class OpenAIProvider extends VisionProvider {
-  constructor(config) {
-    super(config)
-    this.apiKey = config.apiKey || process.env.OPENAI_API_KEY
-  }
-
   async analyze(base64, mime, prompt) {
-    // Implement OpenAI vision API call here
+    // Implement provider-specific API call
   }
 }
 ```
 
-2. Register it in `src/providers/index.js`:
+**3. Register the mapping** (`src/providers/index.js`):
 
 ```javascript
-import { OpenAIProvider } from './openai.js'
-
-const PROVIDERS = {
-  glm: GLMProvider,
+const PROVIDER_MAP = {
+  'zhipuai-coding-plan': GLMProvider,
   openai: OpenAIProvider,
 }
 ```
 
-3. Set `VISION_PROVIDER=openai` and configure the corresponding env vars.
+Then set the `model` environment variable:
 
-Providers can be added for: OpenAI (GPT-4V), Anthropic (Claude), Qwen (Tongyi), etc.
+```jsonc
+"environment": { "model": "openai/gpt-4o" }
+```
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>MCP error: Connection closed</b></summary>
+
+The server crashed on startup. Check:
+
+1. Use **absolute path** in the `command` array (not `~` or `$HOME`)
+2. Run `node src/index.js` manually to see the error output
+3. Ensure `pnpm install` was run in the project directory
+</details>
+
+<details>
+<summary><b>"Provider not found in account.json"</b></summary>
+
+The provider ID in `model` doesn't match any entry in `~/.local/share/opencode/account.json`. Verify you're signed in to that provider in OpenCode. Run `opencode auth` to check.
+
+</details>
+
+<details>
+<summary><b>"OpenCode database not found"</b></summary>
+
+The auto-detection couldn't find the database. Set the `OPENCODE_DB_PATH` environment variable to the full path of your `opencode.db` file.
+
+</details>
+
+<details>
+<summary><b>Tools don't appear in OpenCode</b></summary>
+
+Restart OpenCode completely. Check the MCP server status in the right panel — if it shows an error, the server process failed to start.
+
+</details>
+
+---
+
+## Security
+
+- **No API keys in source code.** Keys are read from OpenCode's `account.json` at runtime
+- **Read-only database access.** The server opens the SQLite database in `readonly` mode — it never writes or modifies OpenCode data
+- **No network listener.** The server runs as a local stdio process — it only talks to the MCP client over stdin/stdout and to the vision API over HTTPS
+- **No telemetry.** No analytics, no phone-home
+
+---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
