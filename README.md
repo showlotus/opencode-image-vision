@@ -5,6 +5,7 @@
 [![MCP](https://img.shields.io/badge/MCP-Server-blue.svg)](https://modelcontextprotocol.io/)
 [![Node](https://img.shields.io/badge/Node.js-22%2B-green.svg)](https://nodejs.org/)
 
+
 > MCP server that adds vision capabilities to text-only LLMs in OpenCode by reading pasted images from the session database and analyzing them via a vision model.
 
 ---
