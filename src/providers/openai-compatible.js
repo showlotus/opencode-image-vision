@@ -52,7 +52,8 @@ export class OpenAICompatibleProvider extends VisionProvider {
       }
 
       const json = await res.json()
-      return json.choices?.[0]?.message?.content?.trim() || '[No content returned]'
+      const msg = json.choices?.[0]?.message
+      return msg?.content?.trim() || msg?.reasoning_content?.trim() || '[No content returned]'
     } finally {
       clearTimeout(timer)
     }

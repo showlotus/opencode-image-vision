@@ -31,6 +31,13 @@ const PROVIDER_MAP = {
   'claude': ClaudeProvider,
 }
 
+export function createProviderFromConfig({ apiKey, baseUrl, model, timeout, providerId }) {
+  const Provider = providerId ? (PROVIDER_MAP[providerId] || OpenAICompatibleProvider) : OpenAICompatibleProvider
+  const config = { apiKey, baseUrl, model }
+  if (timeout != null) config.timeout = timeout
+  return new Provider(config)
+}
+
 export function createProvider() {
   const raw = process.env.model || 'zhipuai-coding-plan/glm-4.6v'
   const slashIdx = raw.indexOf('/')
@@ -51,5 +58,6 @@ export function createProvider() {
 
   const config = resolveProviderConfig(providerId, modelId)
   config.timeout = Number(process.env.timeout) || undefined
-  return new Provider(config)
+  config.providerId = providerId
+  return createProviderFromConfig(config)
 }
