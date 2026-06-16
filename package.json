@@ -16,8 +16,7 @@
   "files": [
     "src/",
     "shared/",
-    "plugin/",
-    "config.example.json"
+    "plugin/"
   ],
   "repository": {
     "type": "git",
