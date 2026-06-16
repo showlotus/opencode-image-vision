@@ -27,17 +27,17 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install Dependencies
-        run: pnpm i
+      # - name: Install Dependencies
+      #   run: pnpm i
 
       # - name: Build
       #   run: pnpm run build
 
-      - name: Create Release
-        run: npx changelogithub
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      # - name: Create Release
+      #   run: npx changelogithub
+      #   continue-on-error: true
+      #   env:
+      #     GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: Publish to NPM
         run: pnpm publish --access public --no-git-checks

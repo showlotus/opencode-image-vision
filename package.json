@@ -1,7 +1,7 @@
 {
   "name": "@showlotus/opencode-image-vision",
   "version": "1.0.3",
-  "description": "MCP server that reads images from OpenCode's SQLite database and analyzes them via vision AI providers",
+  "description": "OpenCode plugin that adds vision capabilities to text-only LLMs by analyzing pasted images via vision AI providers",
   "type": "module",
   "packageManager": "pnpm@8.11.0",
   "main": "src/index.js",
@@ -10,7 +10,8 @@
   },
   "exports": {
     ".": "./plugin/index.js",
-    "./plugin": "./plugin/index.js"
+    "./plugin": "./plugin/index.js",
+    "./server": "./plugin/index.js"
   },
   "files": [
     "src/",
@@ -28,8 +29,8 @@
   },
   "author": "showlotus",
   "keywords": [
-    "mcp",
     "opencode",
+    "opencode-plugin",
     "vision",
     "image-analysis",
     "glm",

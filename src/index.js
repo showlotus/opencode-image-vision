@@ -3,10 +3,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import { getDatabase, getImages } from './db.js'
 import { createProvider } from './providers/index.js'
-import { mapWithConcurrency } from './concurrency.js'
+import { analyzeSessionImages, MAX_LIMIT } from './analyze.js'
 
+// 环境变量驱动的默认值（仅 MCP 独立模式使用）
 const DEFAULT_PROMPT =
   process.env.prompt ||
   [
@@ -16,9 +16,6 @@ const DEFAULT_PROMPT =
   ].join(' ')
 
 const DEFAULT_LIMIT = Number(process.env.limit) || 5
-const MAX_LIMIT = Number(process.env.max_limit) || 20
-
-// 并发分析图片的最大并发数，可通过环境变量 concurrency 覆盖
 const DEFAULT_CONCURRENCY = Number(process.env.concurrency) || 5
 
 let provider
@@ -31,7 +28,7 @@ try {
 
 const server = new McpServer({
   name: 'image-vision',
-  version: '1.0.0',
+  version: '1.0.3',
 })
 
 server.tool(
@@ -43,51 +40,14 @@ server.tool(
     limit: z.number().int().positive().max(MAX_LIMIT).optional().describe(`Maximum number of images to analyze. Default: ${DEFAULT_LIMIT}.`),
   },
   async ({ session_id, prompt, limit: userLimit }) => {
-    const limit = userLimit || DEFAULT_LIMIT
-    const analysisPrompt = prompt || DEFAULT_PROMPT
-
-    let db
-    try {
-      db = getDatabase()
-    } catch (e) {
-      return {
-        content: [{ type: 'text', text: `Failed to open database: ${e.message}` }],
-        isError: true,
-      }
-    }
-
-    try {
-      const images = getImages(db, session_id, limit)
-      if (!images.length) {
-        return {
-          content: [{ type: 'text', text: `No images found in session ${session_id}.` }],
-        }
-      }
-
-      // 并发分析图片，单张失败不影响其他图片，结果保持原顺序
-      const results = await mapWithConcurrency(
-        images,
-        DEFAULT_CONCURRENCY,
-        async (img, i) => {
-          try {
-            const desc = await provider.analyze(img.base64, img.mime, analysisPrompt)
-            return `### Image ${i + 1}: ${img.filename}\n\n${desc}`
-          } catch (e) {
-            return `### Image ${i + 1}: ${img.filename}\n\n[Analysis failed: ${e.message}]`
-          }
-        },
-      )
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Analyzed ${images.length} image(s):\n\n${results.join('\n\n---\n\n')}`,
-          },
-        ],
-      }
-    } finally {
-      db.close()
+    const result = await analyzeSessionImages(provider, session_id, {
+      prompt: prompt || DEFAULT_PROMPT,
+      limit: userLimit || DEFAULT_LIMIT,
+      concurrency: DEFAULT_CONCURRENCY,
+    })
+    return {
+      content: [{ type: 'text', text: result.text }],
+      isError: !result.ok,
     }
   },
 )
