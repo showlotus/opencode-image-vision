@@ -20,7 +20,7 @@ const DEFAULT_CONCURRENCY = Number(process.env.concurrency) || 5
 
 let provider
 try {
-  provider = createProvider()
+  provider = await createProvider()
 } catch (e) {
   console.error(`Failed to initialize provider: ${e.message}`)
   process.exit(1)

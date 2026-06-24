@@ -2,6 +2,9 @@ import { OpenAICompatibleProvider } from './openai-compatible.js'
 import { ClaudeProvider } from './claude.js'
 import { resolveProviderConfig } from '../opencode.js'
 
+// 兜底模型（CLI 模式下 process.env.model 缺失时使用）
+const FALLBACK_MODEL = 'zhipuai-coding-plan/glm-4.6v'
+
 const OPENAI_COMPATIBLE = {
   'zhipuai-coding-plan': OpenAICompatibleProvider,
   'zai-coding-plan': OpenAICompatibleProvider,
@@ -38,12 +41,12 @@ export function createProviderFromConfig({ apiKey, baseUrl, model, timeout, prov
   return new Provider(config)
 }
 
-export function createProvider() {
-  const raw = process.env.model || 'zhipuai-coding-plan/glm-4.6v'
+export async function createProvider() {
+  const raw = process.env.model || FALLBACK_MODEL
   const slashIdx = raw.indexOf('/')
   if (slashIdx === -1) {
     throw new Error(
-      `Invalid model format: "${raw}". Expected "provider/model", e.g. "zhipuai-coding-plan/glm-4.6v"`,
+      `Invalid model format: "${raw}". Expected "provider/model", e.g. "${FALLBACK_MODEL}"`,
     )
   }
   const providerId = raw.slice(0, slashIdx)
@@ -56,7 +59,7 @@ export function createProvider() {
     )
   }
 
-  const config = resolveProviderConfig(providerId, modelId)
+  const config = await resolveProviderConfig(providerId, modelId)
   config.timeout = Number(process.env.timeout) || undefined
   config.providerId = providerId
   return createProviderFromConfig(config)

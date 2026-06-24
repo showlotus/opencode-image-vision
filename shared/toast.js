@@ -1,6 +1,8 @@
 const TITLE = 'Image Vision'
-const PROGRESS_DURATION = 3500
-const PROGRESS_INTERVAL = 3000
+// 盲文旋转动画帧，循环播放形成 spinner 效果（同 opencode thinking 样式）
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+const SPINNER_INTERVAL = 80
+const PROGRESS_DURATION = 130
 // 其他 Toast 结束后额外等待，避免边界时刻与进度 Toast 抢显示
 const EXTERNAL_TOAST_BUFFER = 300
 
@@ -70,16 +72,22 @@ export function startProgressToast(client, getState) {
     if (stopped) return
     if (Date.now() < blockedUntil) return
     const { current, total, elapsedMs = 0 } = getState()
+    const frame = SPINNER_FRAMES[Math.floor(elapsedMs / SPINNER_INTERVAL) % SPINNER_FRAMES.length]
     const progress = total > 1 ? ` (${current}/${total})` : ''
     const elapsed = formatElapsed(elapsedMs)
     // 不 await，定时器内即发即走；toast 内部已自带异常吞掉
-    toast(client, `🔍 Analyzing image${progress} · ${elapsed} elapsed`, 'info', PROGRESS_DURATION)
+    toast(client, `${frame} Analyzing image${progress} · ${elapsed} elapsed`, 'info', PROGRESS_DURATION)
   }
-  show()
-  const timer = setInterval(show, PROGRESS_INTERVAL)
+  let timer
+  const loop = () => {
+    if (stopped) return
+    show()
+    timer = setTimeout(loop, SPINNER_INTERVAL)
+  }
+  loop()
   return () => {
     stopped = true
-    clearInterval(timer)
+    clearTimeout(timer)
     stopListen()
   }
 }

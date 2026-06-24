@@ -12,8 +12,11 @@ export function setDebug(value) {
 }
 
 // 写一条调试日志；开关关闭时为空操作，零开销
-export function dbg(obj) {
+// 接受对象或返回对象的函数：传入函数时，仅在开关开启时才调用求值，
+// 避免调用方在开关关闭时仍构造参数对象（尤其含 Object.keys 等计算）
+export function dbg(objOrFn) {
   if (!enabled) return
+  const obj = typeof objOrFn === 'function' ? objOrFn() : objOrFn
   try {
     appendFileSync(LOG_PATH, new Date().toISOString() + ' ' + JSON.stringify(obj) + '\n')
   } catch {}

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -32,10 +32,10 @@ const PROVIDER_REGISTRY = {
 // 从 OpenCode 凭据文件读取指定提供商的 API key
 // 优先读 auth.json（OpenCode 当前使用的凭据源，扁平结构 providerId -> { type, key }）
 // 读不到则回退 account.json（旧格式，嵌套 active/accounts 结构）
-function readApiKey(opencodeDir, providerId) {
+async function readApiKey(opencodeDir, providerId) {
   // auth.json：当前凭据源
   try {
-    const auth = JSON.parse(readFileSync(join(opencodeDir, 'auth.json'), 'utf-8'))
+    const auth = JSON.parse(await readFile(join(opencodeDir, 'auth.json'), 'utf-8'))
     const entry = auth.active?.[providerId] || auth[providerId]
     if (entry?.key) return entry.key
   } catch {
@@ -44,7 +44,7 @@ function readApiKey(opencodeDir, providerId) {
 
   // account.json：旧格式回退
   try {
-    const account = JSON.parse(readFileSync(join(opencodeDir, 'account.json'), 'utf-8'))
+    const account = JSON.parse(await readFile(join(opencodeDir, 'account.json'), 'utf-8'))
     const accountId = account.active?.[providerId]
     const key = account.accounts?.[accountId]?.credential?.key
     if (key) return key
@@ -55,11 +55,11 @@ function readApiKey(opencodeDir, providerId) {
   return null
 }
 
-export function resolveProviderConfig(providerId, modelId) {
+export async function resolveProviderConfig(providerId, modelId) {
   const opencodeDir = join(homedir(), '.local', 'share', 'opencode')
 
   // 读取 API key，优先 auth.json，回退 account.json
-  const apiKey = readApiKey(opencodeDir, providerId)
+  const apiKey = await readApiKey(opencodeDir, providerId)
   if (!apiKey) {
     throw new Error(`No API key found for provider "${providerId}" in auth.json or account.json`)
   }

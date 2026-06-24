@@ -21,6 +21,7 @@ export function extractModelFromMessages(messages) {
 
     const candidate =
       info.model?.id ||
+      info.model?.modelID ||
       info.modelID ||
       (typeof info.model === 'string' ? info.model : null)
 

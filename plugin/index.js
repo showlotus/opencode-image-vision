@@ -1,5 +1,4 @@
 import { resolveProviderConfig, fetchOpencodeProviders, getProviderBaseUrl } from '../src/opencode.js'
-import { createProviderFromConfig } from '../src/providers/index.js'
 import { createCache } from '../shared/cache.js'
 import { dbg, setDebug } from '../shared/debug.js'
 import { createTransformHook } from './transform.js'
@@ -26,10 +25,10 @@ export default {
       const providerId = model.slice(0, slashIdx)
       const modelId = model.slice(slashIdx + 1)
 
-      // 这里只做同步校验（读凭据），不调用 opencode client
+      // 异步读取凭据（不阻塞事件循环），不调用 opencode client
       // 关键：插件 server() 在 opencode 启动加载阶段被 await，若此处等待 client 回应会与
       // 「启动需等插件加载完成」形成死锁，导致 TUI 卡死黑屏。故所有 client 调用一律延迟到钩子触发时
-      const providerConfig = resolveProviderConfig(providerId, modelId)
+      const providerConfig = await resolveProviderConfig(providerId, modelId)
       providerConfig.timeout = options.timeout || 120000
       providerConfig.providerId = providerId
       const cache = createCache()
@@ -43,12 +42,13 @@ export default {
       let providerPromise
       const getProvider = () =>
         (providerPromise ??= (async () => {
+          const { createProviderFromConfig } = await import('../src/providers/index.js')
           const dynamicBaseUrl = getProviderBaseUrl(await getProviders(), providerId)
           if (dynamicBaseUrl) providerConfig.baseUrl = dynamicBaseUrl
           return createProviderFromConfig(providerConfig)
         })())
 
-      dbg({ event: 'server_init_ok', model, providerId, modelId })
+      dbg(() => ({ event: 'server_init_ok', model, providerId, modelId }))
       return {
         // 发送消息前：把不支持图片的模型会话里的图片 part 直接替换成视觉识别结果文字
         // 是否介入由模型自身的图片输入能力决定（getProviders 提供 opencode 模型能力数据）
@@ -61,7 +61,7 @@ export default {
         }),
       }
     } catch (e) {
-      dbg({ event: 'server_init_fail', error: e.message })
+      dbg(() => ({ event: 'server_init_fail', error: e.message }))
       console.error(`[image-vision] 初始化失败（视觉 provider 不可用）: ${e.message}`)
       return {}
     }
