@@ -4,17 +4,13 @@
   "description": "OpenCode plugin that adds vision capabilities to text-only LLMs by analyzing pasted images via vision AI providers",
   "type": "module",
   "packageManager": "pnpm@8.11.0",
-  "main": "src/index.js",
-  "bin": {
-    "opencode-image-vision": "./src/index.js"
-  },
+
   "exports": {
     ".": "./plugin/index.js",
     "./plugin": "./plugin/index.js",
     "./server": "./plugin/index.js"
   },
   "files": [
-    "src/",
     "shared/",
     "plugin/"
   ],
@@ -40,11 +36,7 @@
     "@opencode-ai/plugin": ">=1.14.0"
   },
   "dependencies": {},
-  "optionalDependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "better-sqlite3": "^11.0.0",
-    "zod": "^3.23.0"
-  },
+
   "engines": {
     "node": ">=18"
   }

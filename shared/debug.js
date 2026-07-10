@@ -1,10 +1,12 @@
 import { appendFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 // 调试开关，默认关闭
 // 开启方式（任一）：设置环境变量 IMAGE_VISION_DEBUG=1，或插件选项传入 debug: true
-// 日志路径可用环境变量 IMAGE_VISION_DEBUG_PATH 覆盖，默认 /tmp/iv-debug.log
+// 日志路径可用环境变量 IMAGE_VISION_DEBUG_PATH 覆盖，默认 <tmpdir>/iv-debug.log
 let enabled = !!process.env.IMAGE_VISION_DEBUG
-const LOG_PATH = process.env.IMAGE_VISION_DEBUG_PATH || '/tmp/iv-debug.log'
+const LOG_PATH = process.env.IMAGE_VISION_DEBUG_PATH || join(tmpdir(), 'iv-debug.log')
 
 // 设置调试开关；环境变量一旦开启则始终生效（优先级最高）
 export function setDebug(value) {

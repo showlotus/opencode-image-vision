@@ -20,11 +20,10 @@ Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc`):
     [
       "@showlotus/opencode-image-vision",
       {
-        "model": "zhipuai-coding-plan/glm-4.6v",
-        "timeout": 120000,
-      },
-    ],
-  ],
+        "model": "zhipuai-coding-plan/glm-4.6v"
+      }
+    ]
+  ]
 }
 ```
 
@@ -57,28 +56,14 @@ See [config.example.json](config.example.json) for more examples.
 
 ## How it works
 
-On each message, the `experimental.chat.messages.transform` hook:
+The plugin hooks into 4 stages of OpenCode's message lifecycle:
 
-1. Scans **only the current user message** for image parts
-2. Skips if the chat model already supports image input
-3. Calls the vision API and replaces each image with `[图片识别结果]\n…` text
+1. **`chat.message`** — Fires when a user sends a message. Detects image parts and sets a flag to trigger tool injection.
+2. **`chat.params`** — Injects `tool_choice` as a fallback to ensure the model calls the `analyze_image` tool.
+3. **`experimental.chat.messages.transform`** — Saves each image to a temp file (`<tmpdir>/iv-images/<hash>.<ext>`) and replaces the image part with a text instruction containing the file path. The model reads the path and calls the tool on its own — no reliance on forced tool injection.
+4. **`analyze_image` tool** — Accepts a `file_path` parameter (Zod schema). Reads the image from disk, runs a child session via the OpenCode SDK against the vision model, and returns the description as tool output. Temp files are preserved for re-analysis in follow-up turns.
 
-Failed images become `[图片识别失败: reason]` and do not block others. Identical images are cached by MD5.
-
----
-
-## Providers
-
-Any provider registered in `src/opencode.js` works. Common examples:
-
-| Provider ID | Example model |
-| ----------- | ------------- |
-| `zhipuai-coding-plan` | `glm-4.6v` |
-| `openai` | `gpt-4o` |
-| `qwen` / `dashscope` | `qwen-vl-max` |
-| `anthropic` / `claude` | `claude-3-5-sonnet-20241022` |
-
-Base URLs are resolved from OpenCode at runtime when available. To add a provider, update `PROVIDER_REGISTRY` and `PROVIDER_MAP` in `src/opencode.js` and `src/providers/index.js`.
+The active model automatically skips image processing if it already supports vision. Failed images produce `[图片识别失败: reason]` and do not block others. Identical images are cached by MD5 hash — cache hits replace the result directly without triggering the tool.
 
 ---
 
