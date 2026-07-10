@@ -12,14 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
           version: 8.11.0  # 与 package.json 的 packageManager 对齐
 
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: pnpm
           registry-url: https://registry.npmjs.org
 
       - name: Publish to NPM
