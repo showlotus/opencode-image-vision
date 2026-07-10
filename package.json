@@ -1,6 +1,6 @@
 {
   "name": "@showlotus/opencode-image-vision",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "OpenCode plugin that adds vision capabilities to text-only LLMs by analyzing pasted images via vision AI providers",
   "type": "module",
   "packageManager": "pnpm@8.11.0",
