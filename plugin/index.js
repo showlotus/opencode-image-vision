@@ -28,8 +28,9 @@ export default {
       const cache = createCache()
       const visionModel = { providerID: providerId, modelID: modelId }
 
+      const client = input.client
       let providersPromise
-      const getProviders = () => (providersPromise ??= fetchOpencodeProviders(input.client))
+      const getProviders = () => (providersPromise ??= fetchOpencodeProviders(client))
 
       const state = {
         hasPendingImages: false,
@@ -44,6 +45,8 @@ export default {
           state.hasPendingImages = output?.parts?.some(p => isImagePart(p)) || false
         },
 
+        // 多图片场景下，hasPendingImages 在队列非空时保持 true，
+        // 此检查会为每轮工具调用自动重新注入 toolChoice
         'chat.params': async (input, output) => {
           if (state.hasPendingImages) {
             output.options.toolChoice = {
@@ -60,7 +63,7 @@ export default {
 
         tool: {
           analyze_image: createAnalyzeImageTool({
-            client: input.client, cache, state, visionModel,
+            client, cache, state, visionModel,
             prompt: options.prompt || DEFAULT_PROMPT,
             timeout: options.timeout || 120000,
           }),

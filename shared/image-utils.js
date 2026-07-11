@@ -1,4 +1,5 @@
-import { extname } from 'node:path'
+import { extname, resolve, sep } from 'node:path'
+import { tmpdir } from 'node:os'
 
 export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']
 
@@ -21,4 +22,15 @@ export function computeTimeoutBySize(base64Length, baseTimeout = 120000) {
   const sizeMB = base64Length / (1024 * 1024)
   const extraMs = Math.ceil(sizeMB / 0.5) * 20000
   return Math.min(baseTimeout + extraMs, 300000)
+}
+
+// 检查文件路径是否在允许的目录范围内（临时图片目录或工作目录）
+// 用于防止路径穿越攻击，确保 analyze_image 工具只能访问合法文件
+export function isPathAllowed(absPath) {
+  const resolved = resolve(absPath)
+  const allowedRoots = [
+    resolve(tmpdir(), 'iv-images'),
+    resolve(process.cwd())
+  ]
+  return allowedRoots.some(root => resolved === root || resolved.startsWith(root + sep))
 }

@@ -9,7 +9,7 @@
 | 新增 hook | `index.js:42-68` | server 返回的映射对象，按 OpenCode 约定命名 |
 | 修改用户配置解析 | `index.js:19-26` | options 校验：model 必填，格式 `providerId/modelId` |
 | 调整图片替换策略 | `transform.js:56-79` | base64→临时文件→指令文本 |
-| 修改工具执行流程 | `analyze-image.js:23-102` | readFileSync→子 session→vision model |
+| 修改工具执行流程 | `analyze-image.js:25-181` | readFileSync→子 session→vision model |
 | 调整 toolChoice fallback | `index.js:47-55` | hasPendingImages 时注入 |
 | 递归防护条件 | `transform.js:24` | modelId === visionModel.modelID 时跳过 |
 
@@ -35,7 +35,7 @@ tool: analyze_image (analyze-image.js:15)
 ## CONVENTIONS
 
 - 工厂模式：`createTransformHook(deps)` / `createAnalyzeImageTool(deps)` 接收 `{ state, cache, ... }` 依赖注入
-- `state` 对象（`index.js:34-38`）在所有 hook 间共享：`hasPendingImages`、`pendingFilePaths`、`pendingSessionId`
+- `state` 对象（`index.js:35-39`）在所有 hook 间共享：`hasPendingImages`、`pendingFilePaths`、`pendingSessionId`、`processingHashes`（惰性初始化的 Set，防止同一 hash 并发分析）
 - `deps.getProviders` 惰性初始化：首次调用才发 IPC，promise 缓存复用（`index.js:31-32`）
 - 工具参数用 `tool.schema.string()`（SDK 提供），禁止直接 import zod
 - `console.error` 前缀统一 `[image-vision]`
@@ -51,5 +51,5 @@ tool: analyze_image (analyze-image.js:15)
 
 - **P0 spinner 不可用** — `analyze_image` 执行期间无 spinner 动画，根因是上游 `GenericTool` 硬编码 `complete={true}`，插件侧无法修复（详见 root TODO.md）
 - **P1 图片高亮丢失** — transform 原位替换 `type: 'file'` 为 `type: 'text'`，TUI 高亮色块消失，接受此取舍
-- **子 session 清理** — `analyze-image.js:87-90` 两个空 catch 块为有意设计，清理失败不影响主流程
+- **子 session 清理** — `analyze-image.js:142-143` 两个空 catch 块为有意设计，清理失败不影响主流程
 - **悬垂 timer 风险** — `Promise.race` 超时后 session.prompt 可能仍 resolve，写入已 delete 的 session，resolve 被静默丢弃

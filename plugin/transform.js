@@ -3,6 +3,7 @@ import { isUnsupportedModel, extractModelFromMessages } from '../shared/model-de
 import { modelSupportsImage } from '../shared/opencode.js'
 import { dbg } from '../shared/debug.js'
 import { saveImageToTempDir } from '../shared/temp-file.js'
+import { access } from 'node:fs/promises'
 
 function findLastUserMessage(messages) {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -49,12 +50,26 @@ export function createTransformHook(deps) {
       if (!intervene) return
 
       const { createHash } = await import('node:crypto')
+      if (state.pendingFilePaths.length > 0) {
+        dbg(() => ({ event: 'stale_pending_dropped', count: state.pendingFilePaths.length }))
+      }
       state.pendingFilePaths = []
       state.hasPendingImages = false
       state.pendingSessionId = sessionId
 
       for (const index of targets) {
         const part = lastUser.parts[index]
+        const localPath = part.source?.type === 'file' && part.source?.path
+        if (localPath && await access(localPath).then(() => true, () => false)) {
+          state.pendingFilePaths.push(localPath)
+          lastUser.parts[index] = {
+            type: 'text',
+            text: `[An image was referenced. Call the analyze_image tool with file_path="${localPath}" to get the image description.]`
+          }
+          state.hasPendingImages = true
+          dbg(() => ({ event: 'image_local', path: localPath }))
+          continue
+        }
         const base64 = extractBase64(part)
         if (!base64) continue
 
