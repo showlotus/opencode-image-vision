@@ -18,7 +18,7 @@ Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc`):
 {
   "plugin": [
     [
-      "@showlotus/opencode-image-vision",
+      "@showlotus/opencode-image-vision@latest",
       {
         "model": "zhipuai-coding-plan/glm-4.6v"
       }
