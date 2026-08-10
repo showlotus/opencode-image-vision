@@ -45,17 +45,12 @@ export default {
           state.hasPendingImages = output?.parts?.some(p => isImagePart(p)) || false
         },
 
-        // 多图片场景下，hasPendingImages 在队列非空时保持 true，
-        // 此检查会为每轮工具调用自动重新注入 toolChoice
-        'chat.params': async (input, output) => {
-          if (state.hasPendingImages) {
-            output.options.toolChoice = {
-              type: 'tool',
-              toolName: 'analyze_image',
-            }
-            dbg(() => ({ event: 'tool_choice_injected' }))
-          }
-        },
+        // toolChoice injection removed entirely.
+        // The text instruction from the transform hook ("Call the analyze_image
+        // tool with file_path=...") is sufficient for any model that supports
+        // tool calling. toolChoice is a force-mechanism that breaks providers
+        // that don't support it (e.g. NVIDIA NIM) and is not needed for
+        // providers that do.
 
         'experimental.chat.messages.transform': createTransformHook({
           state, cache, getProviders, visionModel,
