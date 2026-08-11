@@ -98,7 +98,8 @@ export function createAnalyzeImageTool(deps) {
         let childId
         let timeoutId
         try {
-          const childSession = await client.session.create({ body: { parentID: state.pendingSessionId, title: 'Vision Analysis' } })
+          const parentID = state.pendingSessionId || context?.sessionID || context?.sessionId
+          const childSession = await client.session.create({ body: { parentID, title: 'Vision Analysis' } })
           childId = childSession?.data?.id ?? childSession?.id
           if (!childId) throw new Error('Failed to create child session')
 
