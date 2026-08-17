@@ -46,9 +46,19 @@ Restart OpenCode, paste an image, and ask about it.
 | `model`   | Yes      | —        | Vision model, e.g. `zhipuai-coding-plan/glm-4.6v` |
 | `prompt`  | No       | built-in | Analysis prompt |
 | `timeout` | No       | `120000` | Base timeout for vision API (ms); actual timeout scales with image size up to 300s |
-| `debug`   | No       | `false`  | Log to `/tmp/iv-debug.log` |
+| `debug`   | No       | `false`  | Log to `<tmpdir>/iv-debug.log` |
 
 Debug via env: `IMAGE_VISION_DEBUG=1` (optional `IMAGE_VISION_DEBUG_PATH`).
+
+`<tmpdir>` is the OS temp directory (`node:os` `tmpdir()`), which varies by platform:
+
+| OS      | Temp dir             | Env vars checked by Node (in order)                |
+| ------- | -------------------- | -------------------------------------------------- |
+| macOS   | `/var/folders/.../T` | `$TMPDIR`, fallback `/tmp`                         |
+| Linux   | `/tmp`               | `$TMPDIR`, fallback `/tmp`                         |
+| Windows | `%LOCALAPPDATA%\Temp`| `%TEMP%`, `%TMP%`, `%LOCALAPPDATA%\Temp`, `C:\Windows\Temp` |
+
+Find the actual path on any system with: `node -e "console.log(require('os').tmpdir())"`.
 
 ---
 
@@ -72,7 +82,7 @@ The active model automatically skips image processing if it already supports vis
 - **Plugin not loading** — Confirm `model` is set; check logs for `[image-vision] init failed`; run `opencode auth`
 - **Timeout on large images** — Increase `"timeout": 120000` (or higher)
 - **No API key** — Sign in to the vision provider in OpenCode (`opencode auth`)
-- **Local dev** — Use `file:///absolute/path`, not symlinks; set `"debug": true` and check `/tmp/iv-debug.log`
+- **Local dev** — Use `file:///absolute/path`, not symlinks; set `"debug": true` and check `<tmpdir>/iv-debug.log`
 
 ---
 
