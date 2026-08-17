@@ -1,16 +1,21 @@
 name: Publish to npm
 
 on:
-  workflow_dispatch:  # 手动触发，避免误发布
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+      contents: write  # changelogithub 创建 GitHub Release 需要
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史 + tag 对比，否则 changelog 为空
 
       - uses: pnpm/action-setup@v4
         with:
@@ -26,3 +31,8 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Generate changelog & create GitHub Release
+        run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
