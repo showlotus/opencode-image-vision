@@ -6,7 +6,7 @@
 
 OpenCode plugin that gives **text-only models** (GLM-5, DeepSeek V4, MiniMax, etc.) the ability to understand pasted images. Images are analyzed by a vision model in the background and replaced with text descriptions before the chat model runs — **paste → ask → done**.
 
-Requires OpenCode 1.14+, Node 18+, and a signed-in vision provider (e.g. `glm-4.6v`).
+Requires OpenCode 1.14+, Node 18+, and a signed-in vision provider (e.g. `glm-4.6v`, `deepseek-v4-flash-vision`).
 
 ---
 
@@ -27,7 +27,7 @@ Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc`):
 }
 ```
 
-**`model` is required** (`providerId/modelId`). API keys are read from OpenCode's `auth.json` — no extra key setup.
+**`model` is required** (`providerId/modelId`). Any vision-capable model works, e.g. `zhipuai-coding-plan/glm-4.6v` or `deepseek/deepseek-v4-flash-vision`. API keys are read from OpenCode's `auth.json` — no extra key setup.
 
 For local development, use a `file://` absolute path (symlinks in `plugins/` are skipped):
 
@@ -43,7 +43,7 @@ Restart OpenCode, paste an image, and ask about it.
 
 | Option    | Required | Default  | Description |
 | --------- | -------- | -------- | ----------- |
-| `model`   | Yes      | —        | Vision model, e.g. `zhipuai-coding-plan/glm-4.6v` |
+| `model`   | Yes      | —        | Vision model, e.g. `zhipuai-coding-plan/glm-4.6v`, `deepseek/deepseek-v4-flash-vision` |
 | `prompt`  | No       | built-in | Analysis prompt |
 | `timeout` | No       | `120000` | Base timeout for vision API (ms); actual timeout scales with image size up to 300s |
 | `debug`   | No       | `false`  | Log to `<tmpdir>/iv-debug.log` |
@@ -73,7 +73,7 @@ The plugin hooks into 4 stages of OpenCode's message lifecycle:
 3. **`experimental.chat.messages.transform`** — Saves each image to a temp file (`<tmpdir>/iv-images/<hash>.<ext>`) and replaces the image part with a text instruction containing the file path. The model reads the path and calls the tool on its own — no reliance on forced tool injection.
 4. **`analyze_image` tool** — Accepts a `file_path` parameter (SDK schema). Reads the image from disk, runs a child session via the OpenCode SDK against the vision model, and returns the description as tool output. Temp files are preserved for re-analysis in follow-up turns.
 
-The active model automatically skips image processing if it already supports vision. Failed images produce `[Analysis failed: reason]` and do not block others. Identical images are cached by MD5 hash — cache hits replace the result directly without triggering the tool.
+The active model automatically skips image processing if it already supports vision (e.g. `deepseek-v4-flash-vision`). Failed images produce `[Analysis failed: reason]` and do not block others. Identical images are cached by MD5 hash — cache hits replace the result directly without triggering the tool.
 
 ---
 

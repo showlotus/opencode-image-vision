@@ -8,10 +8,11 @@ export const DEFAULT_UNSUPPORTED_MODELS = [
   'glm-4.5-flash',
 ]
 
+// 精确匹配，避免 'deepseek-v4' 误命中 'deepseek-v4-flash-vision' 等原生视觉模型
 export function isUnsupportedModel(modelId, extraList = []) {
   const lower = modelId.toLowerCase()
   const list = [...DEFAULT_UNSUPPORTED_MODELS, ...extraList]
-  return list.some(kw => lower.includes(kw.toLowerCase()))
+  return list.some(kw => lower === kw.toLowerCase())
 }
 
 export function extractModelFromMessages(messages) {
